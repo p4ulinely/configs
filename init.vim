@@ -1,7 +1,7 @@
 call plug#begin()
 " List your plugins here
 
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
+"Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 """""" Telescope
 Plug 'nvim-lua/plenary.nvim'
@@ -12,6 +12,7 @@ Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.8' }
 "Plug 'nyoom-engineering/nyoom.nvim'
 Plug 'joshdick/onedark.vim'
 Plug 'rebelot/kanagawa.nvim'
+Plug 'slugbyte/lackluster.nvim'
 """""" Themes
 
 """""" StatusBar
@@ -45,12 +46,14 @@ set ruler
 set cursorline
 set relativenumber
 set colorcolumn=90
-set list listchars+=space:. listchars-=eol:$
+"set list listchars+=space:. listchars-=eol:$
+set signcolumn=yes
 
 "syntax on
-"colorscheme onedark
+colorscheme onedark
 "colorscheme habamax
-colorscheme kanagawa-dragon
+"colorscheme kanagawa-dragon "para dia
+"colorscheme lackluster-dark "para noite
 
 "filetype plugin indent on
 set tabstop=4
@@ -65,65 +68,19 @@ nmap <leader>> :tabnext<CR>
 nmap <leader>< :tabprevious<CR>
 nmap <leader>e :Ntree<CR>
 
-""""""""""""""""""" COC
-
-set signcolumn=yes
-
-inoremap <silent><expr> <TAB>
-      \ coc#pum#visible() ? coc#pum#next(1) :
-      \ CheckBackspace() ? "\<Tab>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
-
-inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
-
-function! CheckBackspace() abort
-    let col = col('.') - 1
-    return !col || getline('.')[col - 1]  =~# '\s'
-endfunction
-
-if has('nvim')
-    inoremap <silent><expr> <c-space> coc#refresh()
-else
-    inoremap <silent><expr> <c-@> coc#refresh()
-endif
-
-nnoremap <leader>ii <cmd>CocCommand editor.action.formatDocument<cr>
-nnoremap <leader>rr <cmd>CocCommand document.renameCurrentWord<cr>
-nnoremap <leader>rn <Plug>(coc-rename)
-nnoremap <leader>gr <Plug>(coc-references)
-nnoremap <leader>gi <Plug>(coc-implementation)
-nnoremap <leader>gy <Plug>(coc-type-definition)
-nnoremap <leader>gd <Plug>(coc-definition)
-
-" do workspace
-" nnoremap <leader>s <cmd>CocList -I symbols<cr> 
-
-" do buffer
-nnoremap <leader>s <cmd>CocList outline<cr>
-
-" abre outline na direita
-nnoremap <leader>o <cmd>CocOutline<cr>
-nnoremap <leader>d <cmd>CocList diagnostics<cr>
-
-""""""""""""""""""" COC
-
-""""""""""""""""""" Diffview
-
-nnoremap <leader>do <cmd>DiffviewOpen<cr>
-nnoremap <leader>dc <cmd>DiffviewClose<cr>
-
-""""""""""""""""""" Diffview
-
 """"""""""""""""""" Telescope
+
 "nnoremap <leader>ff <cmd>Telescope git_files<cr>
-"sem o ignore aparece TUDO
 nnoremap <leader>ff <cmd>Telescope find_files<cr>
 nnoremap <leader>fg <cmd>Telescope live_grep<cr>
 nnoremap <leader>fs <cmd>Telescope grep_string<cr>
 nnoremap <leader>fb <cmd>Telescope buffers<cr>
-nnoremap <leader>fh <cmd>Telescope help_tags<cr>
+nnoremap <leader>gd <cmd>Telescope lsp_definitions<cr>
+nnoremap <leader>gi <cmd>Telescope lsp_implementations<cr>
+nnoremap <leader>gr <cmd>Telescope lsp_references<cr>
+nnoremap <leader>s <cmd>Telescope lsp_document_symbols<cr>
+nnoremap <leader>d <cmd>Telescope diagnostics<cr>
+nnoremap <leader>t <cmd>Telescope treesitter<cr>
 
 "lua << EOF
 "require('telescope').setup {
@@ -136,20 +93,35 @@ nnoremap <leader>fh <cmd>Telescope help_tags<cr>
 "EOF
 """"""""""""""""""" Telescope
 
+""""""""""""""""""" Diffview
+
+nnoremap <leader>do <cmd>DiffviewOpen<cr>
+nnoremap <leader>dc <cmd>DiffviewClose<cr>
+
+""""""""""""""""""" Diffview
+
 """"""""""""""""""" StatusBar
 " filename ou %f
+" fileformat ou filetype
 
 lua << END
+
+function getMode()
+	local mode_info = vim.api.nvim_get_mode()
+    return string.upper(mode_info.mode)
+end
+
 require('lualine').setup {
     options = {
         icons_enabled = false,
-        theme = 'iceberg_dark'
+		theme = 'iceberg',
+		section_separators = { left = '', right = '' },
     },
     sections = {
-        lualine_a = {'mode'},
+        lualine_a = {'getMode()', 'diagnostics'},
 		lualine_b = {'branch', 'diff'},
-        lualine_d = {'%f'},
-        lualine_x = {'encoding', 'filetype'},
+        lualine_c = {'filename'},
+        lualine_x = {'searchcount', 'filetype'},
         lualine_z = {'location'}
     },
 }
@@ -162,7 +134,7 @@ lua << END
 require('nvim-treesitter.configs').setup {
 	ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline" },
 	sync_install = false,
-	auto_install = true,
+	auto_install = false,
 	highlight = {
 		enable = true,
 	},
@@ -181,7 +153,7 @@ local capabilities = require("cmp_nvim_lsp").default_capabilities()
 local lspconfig = require('lspconfig')
 
 -- Enable some language servers with the additional completion capabilities offered by nvim-cmp
-local servers = { 'ts_ls', 'vuels', 'pyright', 'csharp_ls' }
+local servers = { 'ts_ls', 'vuels', 'csharp_ls' }
 
 for _, lsp in ipairs(servers) do
   lspconfig[lsp].setup {
@@ -235,42 +207,22 @@ cmp.setup {
     { name = 'luasnip' },
   },
 }
+
+-- LSP: pyright
+--require('lspconfig').pyright.setup {
+--
+--}
+
+-- LSP: ts_ls
+require('lspconfig').ts_ls.setup {
+
+}
+
+-- LSP: vuels
+require('lspconfig').vuels.setup {}
+
+-- LSP: csharp_ls
+require('lspconfig').csharp_ls.setup {}
+
 END
 """"""""""""""""""" LSP
-
-""""""""""""""""""" LSP: pyright
-lua << END
-require('lspconfig').pyright.setup {
-
-}
-END
-""""""""""""""""""" LSP: pyright
-
-""""""""""""""""""" LSP: ts_ls
-lua << END
-require('lspconfig').ts_ls.setup {
-	filetypes = {
-		"javascript",
-		"typescript",
-		"vue",
-	},
-
-}
-END
-""""""""""""""""""" LSP: ts_ls
-
-""""""""""""""""""" LSP: vuels
-lua << END
-require('lspconfig').vuels.setup {
-
-}
-END
-""""""""""""""""""" LSP: vuels
-
-""""""""""""""""""" LSP: csharp_ls
-lua << END
-require('lspconfig').csharp_ls.setup {
-
-}
-END
-""""""""""""""""""" LSP: csharp_ls
